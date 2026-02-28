@@ -1,0 +1,52 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: customer-service-ingress
+  namespace: customer-service
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+spec:
+  ingressClassName: nginx
+  tls:
+  - hosts:
+    - api.example.com
+    secretName: customer-service-tls
+  rules:
+  - host: api.example.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: customer-service
+            port:
+              number: 80
+
+---
+
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: customer-service-pdb
+  namespace: customer-service
+spec:
+  minAvailable: 2
+  selector:
+    matchLabels:
+      app: customer-service
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres-service
+  namespace: customer-service
+spec:
+  type: ExternalName
+  externalName: postgres.default.svc.cluster.local
+  ports:
+  - port: 5432
+    targetPort: 5432
